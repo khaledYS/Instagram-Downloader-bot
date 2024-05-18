@@ -1,7 +1,7 @@
+const { default: axios } = require("axios");
 const igdl = require("instagram-url-direct");
 const { Telegraf, Markup } = require("telegraf");
 require("dotenv").config();
-
 const token = process.env.TOKEN;
 const chnl_token = process.env.CHNL;
 const bot = new Telegraf(token);
@@ -29,36 +29,57 @@ bot.on("callback_query", async (ctx) => {
 })
 
 bot.on("message", onlyJoined(async (ctx) => {
-    const From = ctx.update.message.from.id;
-
     let msg = (await ctx.reply(" Fetching your request..."));
     messageId = msg.message_id;
     chatId = msg.chat.id;
-
     const url = ctx.update.message.text;
+
     try {
         const data = await igdl(url);
-        console.log("hhhhhhhhhhhh")
-        if (data.results_number >= 1) {
-            const res = data.url_list.map((url, _ind) => {
+        if (data.results_number <= 0) {
+            ctx.reply(
+                "The link provided is invalid."
+            )
+            return;
+        }
+
+        const res = await Promise.all(data.url_list.map(async url => {
+            try {
+                const metadata = await axios.head(url);
+                return {
+                    type: "photo",
+                    media: url
+                }
+            } catch (err) {
                 return {
                     type: "video",
                     media: url
                 }
-            });
-            await ctx.telegram.editMessageText(chatId, messageId, undefined, "Done");
-            await ctx.telegram.deleteMessage(chatId, messageId)
-            await ctx.sendChatAction("upload_video");
-            await ctx.telegram.sendMediaGroup(chatId, res);
-            await ctx.telegram.sendMessage(chatId, ("Done, " + poweredBy))
+            }
+        }))
+        await ctx.telegram.editMessageText(chatId, messageId, undefined, "Splitting media...");
+        const chunkSize = 10;
+        let chunks = [];
+        for (let i = 0; i < res.length; i += chunkSize) {
+            const chunk = res.slice(i, i + chunkSize);
+            chunks.push(chunk)
         }
+
+        await ctx.telegram.editMessageText(chatId, messageId, undefined, "Sending Media...");
+        await ctx.sendChatAction("upload_video");
+        for(const chunk of chunks){
+            console.log(chunks.length, chunks.length)
+            await ctx.telegram.sendMediaGroup(chatId, chunk);
+        }
+        await ctx.telegram.editMessageText(chatId, messageId, undefined, "Finished.");
+        await ctx.telegram.sendMessage(chatId, ("Done, " + poweredBy))
     } catch (error) {
-        await ctx.telegram.editMessageText(chatId, messageId, undefined, 'Invalid Link, Please provide valid links. \n الرابط غير صحيح \n \n POWERED BY:@OxGkcl')
+        await ctx.telegram.sendMessage(chatId, 'Invalid Link, Please provide valid links. \n الرابط غير صحيح \n \n POWERED BY:@OxGkcl')
         console.log(error)
     }
-})
+}));
 
-);
+
 
 bot.catch(async (err, ctx) => {
     console.log(`Ooops, encountered an error for ${ctx.updateType}`, err)
