@@ -20,7 +20,7 @@ router.post(`/${token}`, async (req, res)=>{
     }
 })
 router.get("/", async(req, res)=>{
-    console.log('resvii')
+    console.log('resived')
     res.status(200).json({hi:"hi"})
 })
 
