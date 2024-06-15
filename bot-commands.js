@@ -9,17 +9,18 @@ const joiningMessage = "Please Join our Channel first 🤍🤍 \n انضم ال�
 const poweredBy = "POWERED BY:@OxGkcl";
 
 const onlyJoined = (callback) => async (ctx) => {
-    const client_id = ctx.update.message.from.id;
+    /** const client_id = ctx.update.message.from.id;
     const res = await ctx.telegram.getChatMember(chnl_token, client_id);
     if (res.status === "left") {
         ctx.sendMessage(joiningMessage, { chat_id: client_id })
     } else {
         await callback(ctx)
-    }
+    }**/
+        await callback(ctx)
 }
 // Start command
 bot.command("start", onlyJoined((ctx) => {
-    ctx.reply("Send the link of the tiktok video \n ارسل رابط الفيديو")
+    ctx.reply("Send the link of the post \n ارسل رابط الفيديو")
 })
 )
 bot.on("callback_query", async (ctx) => {
